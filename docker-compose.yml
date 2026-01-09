@@ -4,9 +4,43 @@ services:
   rabbitmq:
     container_name: rabbitmq
     image: rabbitmq:3.8-management-alpine
+    hostname: rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: password
     ports:
       - "5672:5672"
       - "15672:15672"
+      - "15692:15692"
+    networks:
+      - shared_net
+    command: >
+      bash -c "rabbitmq-plugins enable --offline rabbitmq_prometheus rabbitmq_management && rabbitmq-server"
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - rabbitmq
+    networks:
+      - shared_net
+
+  grafana:
+    image: grafana/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=password
+    ports:
+      - "4000:3000"
+    networks:
+      - shared_net
+    depends_on:
+      - prometheus
+
+networks:
+  shared_net:
+    driver: bridge
